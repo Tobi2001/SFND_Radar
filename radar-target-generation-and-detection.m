@@ -20,7 +20,7 @@ c = 3 * 10^8;
 % define the target's initial position and velocity. Note : Velocity
 % remains contant
 x_T = 110;
-v_T = 10;
+v_T = 20;
  
 %% FMCW Waveform Generation
 
@@ -151,17 +151,21 @@ figure,surf(doppler_axis,range_axis,RDM);
 
 % *%TODO* :
 %Select the number of Training Cells in both the dimensions.
+cells_Tr = 8;
+cells_Td = 6;
+
 
 % *%TODO* :
 %Select the number of Guard Cells in both dimensions around the Cell under 
 %test (CUT) for accurate estimation
+cells_Gr = 4;
+cells_Gd = 2;
 
 % *%TODO* :
 % offset the threshold by SNR value in dB
-
+threshold_offset = 6;
 % *%TODO* :
 %Create a vector to store noise_level for each iteration on training cells
-noise_level = zeros(1,1);
 
 
 % *%TODO* :
@@ -178,7 +182,21 @@ noise_level = zeros(1,1);
 
    % Use RDM[x,y] as the matrix from the output of 2D FFT for implementing
    % CFAR
-
+num_cells_T = (2*(cells_Tr+cells_Gr)+1)*(2*(cells_Td+cells_Gd)+1)-(2*cells_Gr+1)*(2*cells_Gd+1);
+power_map = db2pow(RDM);
+CFAR_output = zeros(size(RDM));
+for i = 1 : size(RDM,1) - (2 * (cells_Tr + cells_Gr))
+    for j = 1 : size(RDM,2) - (2 * (cells_Td + cells_Gd))
+        noise_TGCUT = sum(power_map(i:i+2*(cells_Tr + cells_Gr), j:j+2*(cells_Td + cells_Gd)), 'all');
+        noise_GCUT = sum(power_map(i+cells_Tr:i+cells_Tr+2*cells_Gr, j+cells_Td:j+cells_Td+2*cells_Gd), 'all');
+        avg_noise = pow2db((noise_TGCUT - noise_GCUT) / num_cells_T);
+        threshold = avg_noise + threshold_offset;
+        cell_CUT = RDM(i+cells_Tr+cells_Gr, j+cells_Td+cells_Td);
+        if cell_CUT > threshold
+            CFAR_output(i+cells_Tr+cells_Gr,j+cells_Td+cells_Gd) = 1;
+        end
+    end
+end
 
 
 
@@ -190,17 +208,10 @@ noise_level = zeros(1,1);
 % set those values to 0. 
  
 
-
-
-
-
-
-
-
 % *%TODO* :
 %display the CFAR output using the Surf function like we did for Range
 %Doppler Response output.
-figure,surf(doppler_axis,range_axis,'replace this with output');
+figure,surf(doppler_axis,range_axis,CFAR_output);
 colorbar;
 
 
