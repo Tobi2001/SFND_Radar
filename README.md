@@ -1,4 +1,4 @@
-# SFND_Radak
+# SFND_Radar
 
 ## CFAR 2D
 
